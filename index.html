@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Controle de Combustível</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .menu button { margin-right: 10px; }
+        .tela { display: none; margin-top: 20px; }
+        .ativa { display: block; }
+        input { margin: 5px; }
+    </style>
+</head>
+<body>
+
+<h1>🚗 Controle de Abastecimento</h1>
+
+<div class="menu">
+    <button onclick="mostrar('cadastro')">Cadastrar</button>
+    <button onclick="mostrar('lista')">Listar</button>
+    <button onclick="mostrar('filtro')">Filtro Avançado</button>
+</div>
+
+<!-- CADASTRO -->
+<div id="cadastro" class="tela ativa">
+    <h2>Novo Abastecimento</h2>
+
+    <input type="text" id="placa" placeholder="Placa"><br>
+    <input type="number" id="odometro" placeholder="Odômetro"><br>
+    <input type="number" id="litros" placeholder="Litros"><br>
+    <input type="number" id="valor" placeholder="Valor"><br>
+
+    <button onclick="enviar()">Salvar</button>
+</div>
+
+<!-- LISTA -->
+<div id="lista" class="tela">
+    <h2>Todos os Abastecimentos</h2>
+    <button onclick="carregar()">Atualizar</button>
+    <ul id="listaDados"></ul>
+</div>
+
+<!-- FILTRO -->
+<div id="filtro" class="tela">
+    <h2>Filtro Avançado</h2>
+
+    <input type="text" id="filtroPlaca" placeholder="Placa (opcional)"><br>
+    <input type="date" id="dataInicio"><br>
+    <input type="date" id="dataFim"><br>
+
+    <button onclick="filtrarAvancado()">Filtrar e Calcular</button>
+
+    <p id="resultado"></p>
+    <ul id="listaFiltro"></ul>
+</div>
+
+<script>
+const url = "https://uoosbkpdznwbcpgjtoqu.supabase.co/rest/v1/abastecimentos";
+const key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvb3Nia3Bkem53YmNwZ2p0b3F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1ODAwMDksImV4cCI6MjA5MTE1NjAwOX0.jeUKZYs3ty8B43DsxCgKooZLHWfIgCzrrQMvspfbm70";
+
+// MENU
+function mostrar(tela) {
+    document.querySelectorAll(".tela").forEach(div => div.classList.remove("ativa"));
+    document.getElementById(tela).classList.add("ativa");
+}
+
+// VALIDAR ODÔMETRO
+async function validarOdometro(placa, novoOdometro) {
+    const res = await fetch(url + "?placa=eq." + placa + "&order=odometro.desc&limit=1", {
+        headers: {
+            "apikey": key,
+            "Authorization": "Bearer " + key
+        }
+    });
+
+    const dados = await res.json();
+
+    if (dados.length > 0) {
+        const ultimo = dados[0].odometro;
+        if (novoOdometro <= ultimo) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// CADASTRAR
+async function enviar() {
+    const placa = document.getElementById("placa").value;
+    const odometro = parseInt(document.getElementById("odometro").value);
+
+    const valido = await validarOdometro(placa, odometro);
+
+    if (!valido) {
+        alert("❌ Odômetro inválido! Não pode ser menor ou igual ao último.");
+        return;
+    }
+
+    const dados = {
+        placa: placa,
+        odometro: odometro,
+        litros: parseFloat(document.getElementById("litros").value),
+        valor: parseFloat(document.getElementById("valor").value)
+    };
+
+    await fetch(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "apikey": key,
+            "Authorization": "Bearer " + key
+        },
+        body: JSON.stringify(dados)
+    });
+
+    alert("Salvo com sucesso!");
+}
+
+// LISTAR
+async function carregar() {
+    const res = await fetch(url, {
+        headers: {
+            "apikey": key,
+            "Authorization": "Bearer " + key
+        }
+    });
+
+    const dados = await res.json();
+
+    const lista = document.getElementById("listaDados");
+    lista.innerHTML = "";
+
+    dados.forEach(item => {
+        const li = document.createElement("li");
+
+        const dataHora = item.data_hora 
+            ? new Date(item.data_hora).toLocaleString() 
+            : "";
+
+        li.innerHTML =
+            `Placa: ${item.placa} | Km: ${item.odometro} | Litros: ${item.litros} | Valor: R$ ${item.valor} | ${dataHora}
+             <button onclick="excluir(${item.id})">❌</button>`;
+
+        lista.appendChild(li);
+    });
+}
+
+// FILTRO + CONSUMO
+async function filtrarAvancado() {
+    const placa = document.getElementById("filtroPlaca").value;
+    const inicio = document.getElementById("dataInicio").value;
+    const fim = document.getElementById("dataFim").value;
+
+    let query = url + "?order=odometro.asc";
+
+    if (placa) query += "&placa=eq." + placa;
+    if (inicio) query += "&data_hora=gte." + inicio;
+    if (fim) query += "&data_hora=lte." + fim;
+
+    const res = await fetch(query, {
+        headers: {
+            "apikey": key,
+            "Authorization": "Bearer " + key
+        }
+    });
+
+    const dados = await res.json();
+
+    let totalKm = 0;
+    let totalLitros = 0;
+
+    for (let i = 1; i < dados.length; i++) {
+        if (dados[i].placa === dados[i-1].placa) {
+            const km = dados[i].odometro - dados[i-1].odometro;
+            totalKm += km;
+            totalLitros += dados[i].litros;
+        }
+    }
+
+    const consumo = totalLitros > 0 ? (totalKm / totalLitros).toFixed(2) : 0;
+
+    document.getElementById("resultado").innerText =
+        "Consumo médio: " + consumo + " km/l";
+
+    const lista = document.getElementById("listaFiltro");
+    lista.innerHTML = "";
+
+    dados.forEach(item => {
+        const li = document.createElement("li");
+
+        const dataHora = item.data_hora 
+            ? new Date(item.data_hora).toLocaleString() 
+            : "";
+
+        li.innerHTML =
+            `Placa: ${item.placa} | Km: ${item.odometro} | Litros: ${item.litros} | ${dataHora}
+             <button onclick="excluir(${item.id})">❌</button>`;
+
+        lista.appendChild(li);
+    });
+}
+
+// EXCLUIR
+async function excluir(id) {
+    if (!confirm("Deseja excluir?")) return;
+
+    await fetch(url + "?id=eq." + id, {
+        method: "DELETE",
+        headers: {
+            "apikey": key,
+            "Authorization": "Bearer " + key
+        }
+    });
+
+    alert("Excluído!");
+    carregar();
+}
+</script>
+
+</body>
+</html>
