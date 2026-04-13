@@ -2,222 +2,331 @@
 <html>
 <head>
     <title>Controle de Combustível</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <style>
-        body { font-family: Arial; margin: 20px; }
-        .menu button { margin-right: 10px; }
-        .tela { display: none; margin-top: 20px; }
+        body {
+            font-family: Arial;
+            background: #f1f3f6;
+            margin: 0;
+        }
+
+        h1 {
+            text-align: center;
+            padding: 20px;
+            background: #007bff;
+            color: white;
+            margin: 0;
+        }
+
+        .menu {
+            display: flex;
+            justify-content: space-around;
+            background: white;
+            padding: 10px;
+        }
+
+        .menu button {
+            border: none;
+            background: none;
+            font-weight: bold;
+            color: #007bff;
+            cursor: pointer;
+        }
+
+        .tela { display: none; padding: 15px; }
         .ativa { display: block; }
-        input { margin: 5px; }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            max-width: 500px;
+            margin: 20px auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn { background: #007bff; color: white; width: 100%; }
+
+        hr { margin: 10px 0; }
     </style>
 </head>
+
 <body>
 
-<h1>🚗 Controle de Abastecimento</h1>
+<!-- LOGIN -->
+<div id="login">
+    <div class="card">
+        <h2>Login</h2>
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="senha" placeholder="Senha">
+        <button class="btn" onclick="login()">Entrar</button>
+    </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;">
+
+<h1>🚗 Abastecimento</h1>
 
 <div class="menu">
     <button onclick="mostrar('cadastro')">Cadastrar</button>
-    <button onclick="mostrar('lista')">Listar</button>
-    <button onclick="mostrar('filtro')">Filtro Avançado</button>
+    <button onclick="mostrar('lista')">Lista</button>
+    <button onclick="mostrar('filtro')">Filtro</button>
 </div>
-
 
 <div id="cadastro" class="tela ativa">
-    <h2>Novo Abastecimento</h2>
-
-    <input type="text" id="placa" placeholder="Placa"><br>
-    <input type="number" id="odometro" placeholder="Odômetro"><br>
-    <input type="number" id="litros" placeholder="Litros"><br>
-    <input type="number" id="valor" placeholder="Valor"><br>
-
-    <button onclick="enviar()">Salvar</button>
+    <div class="card">
+        <input id="placa" placeholder="Placa">
+        <input id="odometro" placeholder="Odômetro">
+        <input id="litros" placeholder="Litros">
+        <input id="valor" placeholder="Valor">
+        <button class="btn" onclick="enviar()">Salvar</button>
+    </div>
 </div>
 
-<!-- LISTA -->
 <div id="lista" class="tela">
-    <h2>Todos os Abastecimentos</h2>
-    <button onclick="carregar()">Atualizar</button>
-    <ul id="listaDados"></ul>
+    <div class="card">
+        <button class="btn" onclick="carregar()">Atualizar</button>
+        <div id="listaDados"></div>
+    </div>
 </div>
 
-<!-- FILTRO -->
 <div id="filtro" class="tela">
-    <h2>Filtro Avançado</h2>
+    <div class="card">
+        <input id="filtroPlaca" placeholder="Placa">
+        <input type="date" id="dataInicio">
+        <input type="date" id="dataFim">
+        <button class="btn" onclick="filtrar()">Filtrar</button>
+        <div id="resultado"></div>
+        <div id="listaFiltro"></div>
+    </div>
+</div>
 
-    <input type="text" id="filtroPlaca" placeholder="Placa (opcional)"><br>
-    <input type="date" id="dataInicio"><br>
-    <input type="date" id="dataFim"><br>
-
-    <button onclick="filtrarAvancado()">Filtrar e Calcular</button>
-
-    <p id="resultado"></p>
-    <ul id="listaFiltro"></ul>
 </div>
 
 <script>
-const url = "https://uoosbkpdznwbcpgjtoqu.supabase.co/rest/v1/abastecimentos";
-const key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvb3Nia3Bkem53YmNwZ2p0b3F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1ODAwMDksImV4cCI6MjA5MTE1NjAwOX0.jeUKZYs3ty8B43DsxCgKooZLHWfIgCzrrQMvspfbm70";
+const SUPABASE_URL = "https://uoosbkpdznwbcpgjtoqu.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvb3Nia3Bkem53YmNwZ2p0b3F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1ODAwMDksImV4cCI6MjA5MTE1NjAwOX0.jeUKZYs3ty8B43DsxCgKooZLHWfIgCzrrQMvspfbm70";
 
-// MENU
+const { createClient } = supabase;
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let usuarioLogado = null;
+
 function mostrar(tela) {
-    document.querySelectorAll(".tela").forEach(div => div.classList.remove("ativa"));
+    document.querySelectorAll(".tela").forEach(t => t.classList.remove("ativa"));
     document.getElementById(tela).classList.add("ativa");
 }
 
-// VALIDAR ODÔMETRO
-async function validarOdometro(placa, novoOdometro) {
-    const res = await fetch(url + "?placa=eq." + placa + "&order=odometro.desc&limit=1", {
+/* ================= LOGIN ================= */
+async function login() {
+    const email = document.getElementById("email").value;
+    const senha = document.getElementById("senha").value;
+
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password: senha
+    });
+
+    if (error) {
+        alert(error.message);
+        return;
+    }
+
+    const userId = data.user.id;
+
+    const res = await fetch(SUPABASE_URL + "/rest/v1/usuarios?id=eq." + userId, {
         headers: {
-            "apikey": key,
-            "Authorization": "Bearer " + key
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY
         }
     });
 
     const dados = await res.json();
 
-    if (dados.length > 0) {
-        const ultimo = dados[0].odometro;
-        if (novoOdometro <= ultimo) {
-            return false;
+    if (dados.length === 0) {
+        alert("Usuário não encontrado na tabela usuarios!");
+        return;
+    }
+
+    usuarioLogado = dados[0];
+
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").style.display = "block";
+
+    if (usuarioLogado.tipo === "motorista") {
+        document.querySelector(".menu").style.display = "none";
+    }
+}
+
+/* ================= VALIDA ODÔMETRO ================= */
+async function validarOdometro(placa, novo) {
+    const res = await fetch(
+        SUPABASE_URL + "/rest/v1/abastecimentos?placa=eq." + placa + "&order=odometro.desc&limit=1",
+        {
+            headers: {
+                "apikey": SUPABASE_KEY,
+                "Authorization": "Bearer " + SUPABASE_KEY
+            }
         }
+    );
+
+    const dados = await res.json();
+
+    if (dados.length > 0) {
+        return novo > dados[0].odometro;
     }
 
     return true;
 }
 
-// CADASTRAR
+/* ================= SALVAR ================= */
 async function enviar() {
     const placa = document.getElementById("placa").value;
     const odometro = parseInt(document.getElementById("odometro").value);
 
-    const valido = await validarOdometro(placa, odometro);
+    const ok = await validarOdometro(placa, odometro);
 
-    if (!valido) {
-        alert("❌ Odômetro inválido! Não pode ser menor ou igual ao último.");
+    if (!ok) {
+        alert("❌ Odômetro inválido!");
         return;
     }
 
     const dados = {
-        placa: placa,
-        odometro: odometro,
+        placa,
+        odometro,
         litros: parseFloat(document.getElementById("litros").value),
-        valor: parseFloat(document.getElementById("valor").value)
+        valor: parseFloat(document.getElementById("valor").value),
+        usuario_id: usuarioLogado.id
     };
 
-    await fetch(url, {
+    await fetch(SUPABASE_URL + "/rest/v1/abastecimentos", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "apikey": key,
-            "Authorization": "Bearer " + key
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY
         },
         body: JSON.stringify(dados)
     });
 
-    alert("Salvo com sucesso!");
+    alert("Salvo!");
 }
 
-// LISTAR
+/* ================= LISTA (CORRIGIDA) ================= */
 async function carregar() {
-    const res = await fetch(url, {
+
+    const resAbastecimentos = await fetch(SUPABASE_URL + "/rest/v1/abastecimentos?order=id.desc", {
         headers: {
-            "apikey": key,
-            "Authorization": "Bearer " + key
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY
         }
     });
 
-    const dados = await res.json();
+    const abastecimentos = await resAbastecimentos.json();
+
+    const resUsuarios = await fetch(SUPABASE_URL + "/rest/v1/usuarios", {
+        headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY
+        }
+    });
+
+    const usuarios = await resUsuarios.json();
 
     const lista = document.getElementById("listaDados");
     lista.innerHTML = "";
 
-    dados.forEach(item => {
-        const li = document.createElement("li");
+    abastecimentos.forEach(item => {
 
-    const dataHora = item.data_hora 
-        ? new Date(item.data_hora).toLocaleString('pt-BR', {
-            timeZone: 'America/Sao_Paulo'
-          })
-        : "";
+        const usuario = usuarios.find(u => u.id === item.usuario_id);
+        const nome = usuario ? usuario.nome : "Desconhecido";
 
-        li.innerHTML =
-            `Placa: ${item.placa} | Km: ${item.odometro} | Litros: ${item.litros} | Valor: R$ ${item.valor} | ${dataHora}
-             <button onclick="excluir(${item.id})">❌</button>`;
+        const data = item.data_hora
+            ? new Date(item.data_hora).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+            : "";
 
-        lista.appendChild(li);
+        const div = document.createElement("div");
+
+        div.innerHTML = `
+            🚗 <b>${item.placa}</b><br>
+            Km: ${item.odometro} | Litros: ${item.litros}<br>
+            💰 R$ ${item.valor}<br>
+            📅 ${data}<br>
+            👤 ${nome}<br>
+            ${usuarioLogado.tipo === "admin"
+                ? `<button onclick="excluir(${item.id})">❌ Excluir</button>`
+                : ""
+            }
+            <hr>
+        `;
+
+        lista.appendChild(div);
     });
 }
 
-// FILTRO + CONSUMO
-async function filtrarAvancado() {
-    const placa = document.getElementById("filtroPlaca").value;
-    const inicio = document.getElementById("dataInicio").value;
-    const fim = document.getElementById("dataFim").value;
+/* ================= EXCLUIR ================= */
+async function excluir(id) {
+    if (!confirm("Excluir?")) return;
 
-    let query = url + "?order=odometro.asc";
+    await fetch(SUPABASE_URL + "/rest/v1/abastecimentos?id=eq." + id, {
+        method: "DELETE",
+        headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY
+        }
+    });
 
-    if (placa) query += "&placa=eq." + placa;
-    if (inicio) query += "&data_hora=gte." + inicio;
-    if (fim) query += "&data_hora=lte." + fim;
+    carregar();
+}
+
+/* ================= FILTRO ================= */
+async function filtrar() {
+
+    let query = SUPABASE_URL + "/rest/v1/abastecimentos?order=odometro.asc";
+
+    if (filtroPlaca.value) query += "&placa=eq." + filtroPlaca.value;
+    if (dataInicio.value) query += "&data_hora=gte." + dataInicio.value;
+    if (dataFim.value) query += "&data_hora=lte." + dataFim.value + "T23:59:59";
 
     const res = await fetch(query, {
         headers: {
-            "apikey": key,
-            "Authorization": "Bearer " + key
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY
         }
     });
 
     const dados = await res.json();
 
-    let totalKm = 0;
-    let totalLitros = 0;
+    let km = 0, litros = 0, valor = 0;
 
     for (let i = 1; i < dados.length; i++) {
-        if (dados[i].placa === dados[i-1].placa) {
-            const km = dados[i].odometro - dados[i-1].odometro;
-            totalKm += km;
-            totalLitros += dados[i].litros;
-        }
+        km += dados[i].odometro - dados[i-1].odometro;
+        litros += dados[i].litros;
+        valor += dados[i].valor;
     }
 
-    const consumo = totalLitros > 0 ? (totalKm / totalLitros).toFixed(2) : 0;
+    const consumo = litros ? (km / litros).toFixed(2) : 0;
+    const custo = km ? (valor / km).toFixed(2) : 0;
 
-    document.getElementById("resultado").innerText =
-        "Consumo médio: " + consumo + " km/l";
-
-    const lista = document.getElementById("listaFiltro");
-    lista.innerHTML = "";
-
-    dados.forEach(item => {
-        const li = document.createElement("li");
-
-    const dataHora = item.data_hora 
-        ? new Date(item.data_hora).toLocaleString('pt-BR', {
-            timeZone: 'America/Sao_Paulo'
-          })
-        : "";
-
-        li.innerHTML =
-            `Placa: ${item.placa} | Km: ${item.odometro} | Litros: ${item.litros} | ${dataHora}
-             <button onclick="excluir(${item.id})">❌</button>`;
-
-        lista.appendChild(li);
-    });
-}
-
-// EXCLUIR
-async function excluir(id) {
-    if (!confirm("Deseja excluir?")) return;
-
-    await fetch(url + "?id=eq." + id, {
-        method: "DELETE",
-        headers: {
-            "apikey": key,
-            "Authorization": "Bearer " + key
-        }
-    });
-
-    alert("Excluído!");
-    carregar();
+    resultado.innerHTML = `Consumo: ${consumo} km/l<br>Custo: R$ ${custo}/km`;
 }
 </script>
 
