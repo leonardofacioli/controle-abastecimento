@@ -133,9 +133,11 @@ async function carregar() {
     dados.forEach(item => {
         const li = document.createElement("li");
 
-        const dataHora = item.data_hora 
-            ? new Date(item.data_hora).toLocaleString() 
-            : "";
+    const dataHora = item.data_hora 
+        ? new Date(item.data_hora).toLocaleString('pt-BR', {
+            timeZone: 'America/Sao_Paulo'
+          })
+        : "";
 
         li.innerHTML =
             `Placa: ${item.placa} | Km: ${item.odometro} | Litros: ${item.litros} | Valor: R$ ${item.valor} | ${dataHora}
@@ -188,9 +190,11 @@ async function filtrarAvancado() {
     dados.forEach(item => {
         const li = document.createElement("li");
 
-        const dataHora = item.data_hora 
-            ? new Date(item.data_hora).toLocaleString() 
-            : "";
+    const dataHora = item.data_hora 
+        ? new Date(item.data_hora).toLocaleString('pt-BR', {
+            timeZone: 'America/Sao_Paulo'
+          })
+        : "";
 
         li.innerHTML =
             `Placa: ${item.placa} | Km: ${item.odometro} | Litros: ${item.litros} | ${dataHora}
