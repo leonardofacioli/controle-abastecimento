@@ -1,13 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle de Combustível</title>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
         body {
-            font-family: Arial;
+            font-family: Arial, sans-serif;
             background: #f1f3f6;
             margin: 0;
         }
@@ -23,8 +25,12 @@
         .menu {
             display: flex;
             justify-content: space-around;
+            align-items: center;
             background: white;
             padding: 10px;
+            gap: 8px;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
 
         .menu button {
@@ -33,26 +39,40 @@
             font-weight: bold;
             color: #007bff;
             cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 8px;
         }
 
-        .tela { display: none; padding: 15px; }
-        .ativa { display: block; }
+        .menu button:hover {
+            background: #eef5ff;
+        }
+
+        .tela {
+            display: none;
+            padding: 15px;
+        }
+
+        .ativa {
+            display: block;
+        }
 
         .card {
             background: white;
             padding: 20px;
             border-radius: 15px;
-            max-width: 500px;
+            max-width: 600px;
             margin: 20px auto;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
-        input {
+        input, select {
             width: 100%;
+            box-sizing: border-box;
             padding: 12px;
             margin: 8px 0;
             border-radius: 10px;
             border: 1px solid #ccc;
+            font-size: 14px;
         }
 
         button {
@@ -60,65 +80,140 @@
             border-radius: 10px;
             border: none;
             cursor: pointer;
+            font-size: 14px;
         }
 
-        .btn { background: #007bff; color: white; width: 100%; }
+        .btn {
+            background: #007bff;
+            color: white;
+            width: 100%;
+            margin-top: 8px;
+        }
 
-        hr { margin: 10px 0; }
+        .btn:hover {
+            opacity: 0.95;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            width: auto;
+            margin-top: 10px;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .registro {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+
+        .registro strong {
+            color: #0f172a;
+        }
+
+        #resultado {
+            background: #e9f7ef;
+            padding: 12px;
+            border-radius: 10px;
+            margin-top: 12px;
+            text-align: center;
+            line-height: 1.6;
+            border: 1px solid #cce9d5;
+        }
+
+        .topo-info {
+            text-align: center;
+            color: #334155;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+
+        .erro {
+            color: #b91c1c;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .sucesso {
+            color: #166534;
+            text-align: center;
+            margin-top: 10px;
+        }
     </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
 <div id="login">
     <div class="card">
         <h2>Login</h2>
         <input type="email" id="email" placeholder="Email">
         <input type="password" id="senha" placeholder="Senha">
         <button class="btn" onclick="login()">Entrar</button>
+        <div id="mensagemLogin"></div>
     </div>
 </div>
 
-<!-- APP -->
 <div id="app" style="display:none;">
+    <h1>🚗 Abastecimento</h1>
 
-<h1>🚗 Abastecimento</h1>
+    <div class="topo-info" id="usuarioInfo"></div>
 
-<div class="menu">
-    <button onclick="mostrar('cadastro')">Cadastrar</button>
-    <button onclick="mostrar('lista')">Lista</button>
-    <button onclick="mostrar('filtro')">Filtro</button>
-</div>
-
-<div id="cadastro" class="tela ativa">
-    <div class="card">
-        <input id="placa" placeholder="Placa">
-        <input id="odometro" placeholder="Odômetro">
-        <input id="litros" placeholder="Litros">
-        <input id="valor" placeholder="Valor">
-        <button class="btn" onclick="enviar()">Salvar</button>
+    <div class="menu" id="menu">
+        <button id="btnCadastro" onclick="mostrar('cadastro')">Cadastrar</button>
+        <button id="btnLista" onclick="mostrar('lista')">Lista</button>
+        <button id="btnFiltro" onclick="mostrar('filtro')">Filtro</button>
+        <button id="btnSair" onclick="logout()">Sair</button>
     </div>
-</div>
 
-<div id="lista" class="tela">
-    <div class="card">
-        <button class="btn" onclick="carregar()">Atualizar</button>
-        <div id="listaDados"></div>
+    <div id="cadastro" class="tela ativa">
+        <div class="card">
+            <h2>Novo abastecimento</h2>
+            <input id="placa" placeholder="Placa" maxlength="7">
+            <input id="odometro" type="number" placeholder="Odômetro">
+            <input id="litros" type="number" step="0.01" placeholder="Litros">
+            <input id="valor" type="number" step="0.01" placeholder="Valor">
+
+            <select id="tanqueCheio">
+                <option value="">Tanque cheio?</option>
+                <option value="true">Sim</option>
+                <option value="false">Não</option>
+            </select>
+
+            <button class="btn" onclick="enviar()">Salvar</button>
+            <button class="btn-secondary" onclick="limparFormulario()">Limpar</button>
+            <div id="mensagemCadastro"></div>
+        </div>
     </div>
-</div>
 
-<div id="filtro" class="tela">
-    <div class="card">
-        <input id="filtroPlaca" placeholder="Placa">
-        <input type="date" id="dataInicio">
-        <input type="date" id="dataFim">
-        <button class="btn" onclick="filtrar()">Filtrar</button>
-        <div id="resultado"></div>
-        <div id="listaFiltro"></div>
+    <div id="lista" class="tela">
+        <div class="card">
+            <h2>Lista de abastecimentos</h2>
+            <button class="btn" onclick="carregar()">Atualizar</button>
+            <div id="listaDados"></div>
+        </div>
     </div>
-</div>
 
+    <div id="filtro" class="tela">
+        <div class="card">
+            <h2>Filtro e indicadores</h2>
+            <input id="filtroPlaca" placeholder="Placa">
+            <input type="date" id="dataInicio">
+            <input type="date" id="dataFim">
+            <button class="btn" onclick="filtrar()">Filtrar</button>
+            <div id="resultado"></div>
+            <div id="listaFiltro"></div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -129,16 +224,92 @@ const { createClient } = supabase;
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let usuarioLogado = null;
+let usuariosCache = [];
 
 function mostrar(tela) {
     document.querySelectorAll(".tela").forEach(t => t.classList.remove("ativa"));
     document.getElementById(tela).classList.add("ativa");
 }
 
-/* ================= LOGIN ================= */
+function formatarPlaca(valor) {
+    return (valor || "")
+        .replace(/[^A-Za-z0-9]/g, "")
+        .toUpperCase()
+        .trim();
+}
+
+function validarPlaca(placa) {
+    const placaLimpa = placa.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    return placaLimpa.length === 7;
+}
+
+function formatarDataHora(dataHora) {
+    if (!dataHora) return "";
+    return new Date(dataHora).toLocaleString("pt-BR", {
+        timeZone: "America/Sao_Paulo"
+    });
+}
+
+function setMensagem(id, texto, tipo = "") {
+    const el = document.getElementById(id);
+    el.className = tipo;
+    el.innerHTML = texto || "";
+}
+
+function limparFormulario() {
+    document.getElementById("placa").value = "";
+    document.getElementById("odometro").value = "";
+    document.getElementById("litros").value = "";
+    document.getElementById("valor").value = "";
+    document.getElementById("tanqueCheio").value = "";
+    setMensagem("mensagemCadastro", "", "");
+}
+
+async function buscarUsuarios() {
+    const res = await fetch(SUPABASE_URL + "/rest/v1/usuarios?select=id,nome,cpf,tipo", {
+        headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY
+        }
+    });
+
+    usuariosCache = await res.json();
+    return usuariosCache;
+}
+
+function nomeUsuarioPorId(id) {
+    const usuario = usuariosCache.find(u => u.id === id);
+    return usuario ? usuario.nome : "Desconhecido";
+}
+
+function aplicarPermissoes() {
+    const btnLista = document.getElementById("btnLista");
+    const btnFiltro = document.getElementById("btnFiltro");
+    const btnCadastro = document.getElementById("btnCadastro");
+
+    btnCadastro.style.display = "inline-block";
+
+    if (usuarioLogado.tipo === "motorista") {
+        btnLista.style.display = "none";
+        btnFiltro.style.display = "none";
+        mostrar("cadastro");
+    } else {
+        btnLista.style.display = "inline-block";
+        btnFiltro.style.display = "inline-block";
+        mostrar("cadastro");
+    }
+}
+
 async function login() {
-    const email = document.getElementById("email").value;
+    setMensagem("mensagemLogin", "", "");
+
+    const email = document.getElementById("email").value.trim();
     const senha = document.getElementById("senha").value;
+
+    if (!email || !senha) {
+        setMensagem("mensagemLogin", "Preencha email e senha.", "erro");
+        return;
+    }
 
     const { data, error } = await supabaseClient.auth.signInWithPassword({
         email,
@@ -146,13 +317,13 @@ async function login() {
     });
 
     if (error) {
-        alert(error.message);
+        setMensagem("mensagemLogin", "Erro no login: " + error.message, "erro");
         return;
     }
 
     const userId = data.user.id;
 
-    const res = await fetch(SUPABASE_URL + "/rest/v1/usuarios?id=eq." + userId, {
+    const res = await fetch(SUPABASE_URL + "/rest/v1/usuarios?id=eq." + userId + "&select=id,nome,cpf,tipo", {
         headers: {
             "apikey": SUPABASE_KEY,
             "Authorization": "Bearer " + SUPABASE_KEY
@@ -161,25 +332,68 @@ async function login() {
 
     const dados = await res.json();
 
-    if (dados.length === 0) {
-        alert("Usuário não encontrado na tabela usuarios!");
+    if (!dados.length) {
+        setMensagem("mensagemLogin", "Usuário autenticado, mas não encontrado na tabela usuarios.", "erro");
+        await supabaseClient.auth.signOut();
         return;
     }
 
     usuarioLogado = dados[0];
+    await buscarUsuarios();
 
     document.getElementById("login").style.display = "none";
     document.getElementById("app").style.display = "block";
+    document.getElementById("usuarioInfo").innerHTML =
+        `Usuário: <strong>${usuarioLogado.nome}</strong> (${usuarioLogado.tipo})`;
 
-    if (usuarioLogado.tipo === "motorista") {
-        document.querySelector(".menu").style.display = "none";
-    }
+    aplicarPermissoes();
 }
 
-/* ================= VALIDA ODÔMETRO ================= */
-async function validarOdometro(placa, novo) {
+async function restaurarSessao() {
+    const { data, error } = await supabaseClient.auth.getSession();
+
+    if (error || !data.session) return;
+
+    const userId = data.session.user.id;
+
+    const res = await fetch(SUPABASE_URL + "/rest/v1/usuarios?id=eq." + userId + "&select=id,nome,cpf,tipo", {
+        headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY
+        }
+    });
+
+    const dados = await res.json();
+
+    if (!dados.length) return;
+
+    usuarioLogado = dados[0];
+    await buscarUsuarios();
+
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    document.getElementById("usuarioInfo").innerHTML =
+        `Usuário: <strong>${usuarioLogado.nome}</strong> (${usuarioLogado.tipo})`;
+
+    aplicarPermissoes();
+}
+
+async function logout() {
+    await supabaseClient.auth.signOut();
+    usuarioLogado = null;
+    document.getElementById("app").style.display = "none";
+    document.getElementById("login").style.display = "block";
+    document.getElementById("email").value = "";
+    document.getElementById("senha").value = "";
+    setMensagem("mensagemLogin", "", "");
+}
+
+async function validarOdometro(placa, novoOdometro) {
     const res = await fetch(
-        SUPABASE_URL + "/rest/v1/abastecimentos?placa=eq." + placa + "&order=odometro.desc&limit=1",
+        SUPABASE_URL +
+        "/rest/v1/abastecimentos?placa=eq." +
+        encodeURIComponent(placa) +
+        "&select=odometro&order=odometro.desc&limit=1",
         {
             headers: {
                 "apikey": SUPABASE_KEY,
@@ -191,102 +405,142 @@ async function validarOdometro(placa, novo) {
     const dados = await res.json();
 
     if (dados.length > 0) {
-        return novo > dados[0].odometro;
+        return novoOdometro > Number(dados[0].odometro);
     }
 
     return true;
 }
 
-/* ================= SALVAR ================= */
 async function enviar() {
-    const placa = document.getElementById("placa").value;
-    const odometro = parseInt(document.getElementById("odometro").value);
+    setMensagem("mensagemCadastro", "", "");
 
-    const ok = await validarOdometro(placa, odometro);
+    if (!usuarioLogado) {
+        setMensagem("mensagemCadastro", "Usuário não autenticado.", "erro");
+        return;
+    }
 
-    if (!ok) {
-        alert("❌ Odômetro inválido!");
+    const placa = formatarPlaca(document.getElementById("placa").value);
+
+    if (!validarPlaca(placa)) {
+        setMensagem("mensagemCadastro", "A placa deve ter exatamente 7 caracteres.", "erro");
+        return;
+    }
+
+    const odometro = Number(document.getElementById("odometro").value);
+    const litros = Number(document.getElementById("litros").value);
+    const valor = Number(document.getElementById("valor").value);
+    const tanqueCheioValor = document.getElementById("tanqueCheio").value;
+
+    if (!placa || !odometro || !litros || !valor || tanqueCheioValor === "") {
+        setMensagem("mensagemCadastro", "Preencha todos os campos corretamente.", "erro");
+        return;
+    }
+
+    if (odometro <= 0 || litros <= 0 || valor <= 0) {
+        setMensagem("mensagemCadastro", "Odômetro, litros e valor devem ser maiores que zero.", "erro");
+        return;
+    }
+
+    const odometroValido = await validarOdometro(placa, odometro);
+
+    if (!odometroValido) {
+        setMensagem("mensagemCadastro", "❌ Odômetro inválido. Ele deve ser maior que o último registrado para esta placa.", "erro");
         return;
     }
 
     const dados = {
         placa,
         odometro,
-        litros: parseFloat(document.getElementById("litros").value),
-        valor: parseFloat(document.getElementById("valor").value),
+        litros,
+        valor,
+        tanque_cheio: tanqueCheioValor === "true",
         usuario_id: usuarioLogado.id
     };
 
-    await fetch(SUPABASE_URL + "/rest/v1/abastecimentos", {
+    const res = await fetch(SUPABASE_URL + "/rest/v1/abastecimentos", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             "apikey": SUPABASE_KEY,
-            "Authorization": "Bearer " + SUPABASE_KEY
+            "Authorization": "Bearer " + SUPABASE_KEY,
+            "Prefer": "return=representation"
         },
         body: JSON.stringify(dados)
     });
 
-    alert("Salvo!");
+    if (!res.ok) {
+        const erro = await res.text();
+        setMensagem("mensagemCadastro", "Erro ao salvar: " + erro, "erro");
+        return;
+    }
+
+    setMensagem("mensagemCadastro", "Abastecimento salvo com sucesso.", "sucesso");
+    limparFormulario();
 }
 
-/* ================= LISTA (CORRIGIDA) ================= */
 async function carregar() {
+    if (!usuarioLogado) return;
 
-    const resAbastecimentos = await fetch(SUPABASE_URL + "/rest/v1/abastecimentos?order=id.desc", {
-        headers: {
-            "apikey": SUPABASE_KEY,
-            "Authorization": "Bearer " + SUPABASE_KEY
+    await buscarUsuarios();
+
+    const resAbastecimentos = await fetch(
+        SUPABASE_URL + "/rest/v1/abastecimentos?select=id,placa,odometro,litros,valor,data_hora,usuario_id,tanque_cheio&order=data_hora.desc.nullslast,id.desc",
+        {
+            headers: {
+                "apikey": SUPABASE_KEY,
+                "Authorization": "Bearer " + SUPABASE_KEY
+            }
         }
-    });
+    );
 
     const abastecimentos = await resAbastecimentos.json();
-
-    const resUsuarios = await fetch(SUPABASE_URL + "/rest/v1/usuarios", {
-        headers: {
-            "apikey": SUPABASE_KEY,
-            "Authorization": "Bearer " + SUPABASE_KEY
-        }
-    });
-
-    const usuarios = await resUsuarios.json();
 
     const lista = document.getElementById("listaDados");
     lista.innerHTML = "";
 
+    if (!abastecimentos.length) {
+        lista.innerHTML = "<p>Nenhum abastecimento encontrado.</p>";
+        return;
+    }
+
     abastecimentos.forEach(item => {
-
-        const usuario = usuarios.find(u => u.id === item.usuario_id);
-        const nome = usuario ? usuario.nome : "Desconhecido";
-
-        const data = item.data_hora
-            ? new Date(item.data_hora).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-            : "";
-
         const div = document.createElement("div");
+        div.className = "registro";
+
+        const nome = nomeUsuarioPorId(item.usuario_id);
+        const data = formatarDataHora(item.data_hora);
+        const tanqueCheioTexto = item.tanque_cheio ? "Sim" : "Não";
 
         div.innerHTML = `
-            🚗 <b>${item.placa}</b><br>
+            <strong>🚗 ${item.placa}</strong><br>
             Km: ${item.odometro} | Litros: ${item.litros}<br>
-            💰 R$ ${item.valor}<br>
+            💰 Valor: R$ ${Number(item.valor).toFixed(2)}<br>
+            ⛽ Tanque cheio: ${tanqueCheioTexto}<br>
             📅 ${data}<br>
-            👤 ${nome}<br>
-            ${usuarioLogado.tipo === "admin"
-                ? `<button onclick="excluir(${item.id})">❌ Excluir</button>`
-                : ""
-            }
-            <hr>
+            👤 ${nome}
         `;
+
+        if (usuarioLogado.tipo === "admin") {
+            const botao = document.createElement("button");
+            botao.className = "btn-danger";
+            botao.textContent = "❌ Excluir";
+            botao.onclick = () => excluir(item.id);
+            div.appendChild(botao);
+        }
 
         lista.appendChild(div);
     });
 }
 
-/* ================= EXCLUIR ================= */
 async function excluir(id) {
-    if (!confirm("Excluir?")) return;
+    if (!usuarioLogado || usuarioLogado.tipo !== "admin") {
+        alert("Apenas administrador pode excluir.");
+        return;
+    }
 
-    await fetch(SUPABASE_URL + "/rest/v1/abastecimentos?id=eq." + id, {
+    if (!confirm("Deseja excluir este abastecimento?")) return;
+
+    const res = await fetch(SUPABASE_URL + "/rest/v1/abastecimentos?id=eq." + id, {
         method: "DELETE",
         headers: {
             "apikey": SUPABASE_KEY,
@@ -294,17 +548,50 @@ async function excluir(id) {
         }
     });
 
+    if (!res.ok) {
+        alert("Erro ao excluir.");
+        return;
+    }
+
+    alert("Excluído com sucesso.");
     carregar();
 }
 
-/* ================= FILTRO ================= */
 async function filtrar() {
+    if (!usuarioLogado) return;
 
-    let query = SUPABASE_URL + "/rest/v1/abastecimentos?order=odometro.asc";
+    const placa = formatarPlaca(document.getElementById("filtroPlaca").value);
+    const dataInicio = document.getElementById("dataInicio").value;
+    const dataFim = document.getElementById("dataFim").value;
 
-    if (filtroPlaca.value) query += "&placa=eq." + filtroPlaca.value;
-    if (dataInicio.value) query += "&data_hora=gte." + dataInicio.value;
-    if (dataFim.value) query += "&data_hora=lte." + dataFim.value + "T23:59:59";
+    const listaFiltro = document.getElementById("listaFiltro");
+    const resultado = document.getElementById("resultado");
+
+    listaFiltro.innerHTML = "";
+    resultado.innerHTML = "";
+
+    if (dataInicio && dataFim && dataFim < dataInicio) {
+        resultado.innerHTML = "A data final não pode ser anterior à data inicial.";
+        return;
+    }
+
+    await buscarUsuarios();
+
+    let query =
+        SUPABASE_URL +
+        "/rest/v1/abastecimentos?select=id,placa,odometro,litros,valor,data_hora,usuario_id,tanque_cheio&order=placa.asc,odometro.asc";
+
+    if (placa) {
+        query += "&placa=eq." + encodeURIComponent(placa);
+    }
+
+    if (dataInicio) {
+        query += "&data_hora=gte." + dataInicio + "T00:00:00";
+    }
+
+    if (dataFim) {
+        query += "&data_hora=lte." + dataFim + "T23:59:59";
+    }
 
     const res = await fetch(query, {
         headers: {
@@ -315,19 +602,98 @@ async function filtrar() {
 
     const dados = await res.json();
 
-    let km = 0, litros = 0, valor = 0;
-
-    for (let i = 1; i < dados.length; i++) {
-        km += dados[i].odometro - dados[i-1].odometro;
-        litros += dados[i].litros;
-        valor += dados[i].valor;
+    if (!dados.length) {
+        resultado.innerHTML = "Nenhum registro encontrado para o filtro informado.";
+        return;
     }
 
-    const consumo = litros ? (km / litros).toFixed(2) : 0;
-    const custo = km ? (valor / km).toFixed(2) : 0;
+    let totalKm = 0;
+    let totalLitros = 0;
+    let totalValor = 0;
 
-    resultado.innerHTML = `Consumo: ${consumo} km/l<br>Custo: R$ ${custo}/km`;
+    const grupos = {};
+    dados.forEach(item => {
+        if (!grupos[item.placa]) grupos[item.placa] = [];
+        grupos[item.placa].push(item);
+    });
+
+    Object.values(grupos).forEach(registros => {
+        registros.sort((a, b) => Number(a.odometro) - Number(b.odometro));
+
+        let ultimoTanqueCheio = null;
+
+        registros.forEach(registro => {
+            if (registro.tanque_cheio) {
+                if (ultimoTanqueCheio) {
+                    const kmRodado = Number(registro.odometro) - Number(ultimoTanqueCheio.odometro);
+
+                    if (kmRodado > 0) {
+                        totalKm += kmRodado;
+                        totalLitros += Number(registro.litros);
+                        totalValor += Number(registro.valor);
+                    }
+                }
+
+                ultimoTanqueCheio = registro;
+            }
+        });
+    });
+
+    const consumo = totalLitros > 0 ? (totalKm / totalLitros).toFixed(2) : "0.00";
+    const custoKm = totalKm > 0 ? (totalValor / totalKm).toFixed(2) : "0.00";
+
+    resultado.innerHTML = `
+        <strong>Consumo médio:</strong> ${consumo} km/l<br>
+        <strong>Custo por km:</strong> R$ ${custoKm}<br>
+        <small>* cálculo considerando apenas abastecimentos com tanque cheio</small>
+    `;
+
+    dados
+        .slice()
+        .sort((a, b) => {
+            const da = a.data_hora ? new Date(a.data_hora).getTime() : 0;
+            const db = b.data_hora ? new Date(b.data_hora).getTime() : 0;
+            return db - da;
+        })
+        .forEach(item => {
+            const div = document.createElement("div");
+            div.className = "registro";
+
+            div.innerHTML = `
+                <strong>🚗 ${item.placa}</strong><br>
+                Km: ${item.odometro} | Litros: ${item.litros}<br>
+                💰 Valor: R$ ${Number(item.valor).toFixed(2)}<br>
+                ⛽ Tanque cheio: ${item.tanque_cheio ? "Sim" : "Não"}<br>
+                📅 ${formatarDataHora(item.data_hora)}<br>
+                👤 ${nomeUsuarioPorId(item.usuario_id)}
+            `;
+
+            listaFiltro.appendChild(div);
+        });
 }
+
+document.getElementById("dataInicio").addEventListener("change", function () {
+    const dataFim = document.getElementById("dataFim");
+    dataFim.min = this.value;
+
+    if (dataFim.value && dataFim.value < this.value) {
+        dataFim.value = "";
+    }
+});
+
+document.getElementById("email").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+        login();
+    }
+});
+
+document.getElementById("senha").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+        login();
+    }
+});
+
+restaurarSessao();
 </script>
 
 </body>
